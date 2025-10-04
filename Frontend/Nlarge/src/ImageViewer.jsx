@@ -1,4 +1,3 @@
-// ./src/ImageViewer.jsx
 import React, { useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import OpenSeadragon from 'openseadragon'; // Import the core library
@@ -43,11 +42,11 @@ const ImageViewer = () => {
         element: viewerRef.current,
         prefixUrl: 'https://openseadragon.github.io/openseadragon/images/',
         tileSources: {
-          height: 1508,
-          width: 1760,
-          tileSize: 256,
+          height: 11719,
+          width: 11472,
+          tileSize: 512,
           minLevel: 0,
-          maxLevel: 4,
+          maxLevel: 6,
           getTileUrl: function(level, x, y) {
             const url = `${tileUrl}${level}/${x}/${y}.png`;
             console.log(`🎯 Level ${level}, X ${x}, Y ${y} -> ${url}`);
@@ -56,10 +55,10 @@ const ImageViewer = () => {
         },
         showNavigator: true,
         // Zoom settings to see all levels
-        visibilityRatio: 0.5,
-        minZoomLevel: 0.05,    // Very zoomed out to see level 0
+        visibilityRatio: 1,
+        minZoomLevel: 1,    // Very zoomed out to see level 0
         maxZoomLevel: 50,      // Very zoomed in to see level 4 details
-        defaultZoomLevel: 0.1, // Start very zoomed out to see level 0
+        defaultZoomLevel: 0.5, // Start very zoomed out to see level 0
         // Smooth transitions between levels
         springStiffness: 6.5,
         animationTime: 1.2,

@@ -1,11 +1,16 @@
 import os
 from PIL import Image
+import math
 
 # --- CONFIGURATION ---
-SOURCE_IMAGE_PATH = './tiles/earth.png'  # The giant image you downloaded
-OUTPUT_DIR = './tiles/green_fits2'            # Where the tile folders will be created
-TILE_SIZE = 256                   # The width and height of each tile in pixels
-MAX_ZOOM = 4                      # The maximum zoom level you want to generate
+SOURCE_IMAGE_PATH = './tiles/starbirth.tif'  # The giant image you downloaded
+OUTPUT_DIR = './tiles/starbirth_fits'            # Where the tile folders will be created
+TILE_SIZE = 512  # The width and height of each tile in pixels
+Image.MAX_IMAGE_PIXELS = None
+source_image = Image.open(SOURCE_IMAGE_PATH)
+original_width, original_height = source_image.size
+min_level_size = 512  # or your preferred minimum
+MAX_ZOOM = int(math.ceil(math.log2(original_width / min_level_size)))                     # The maximum zoom level you want to generate
 
 # --- SCRIPT ---
 
@@ -13,8 +18,8 @@ def create_tiles():
     print("Opening source image...")
     # Pillow can have issues with very large images, so this line helps
     Image.MAX_IMAGE_PIXELS = None 
-    source_image = Image.open(SOURCE_IMAGE_PATH)
-    original_width, original_height = source_image.size
+    
+    
 
     print(f"Source image size: {original_width}x{original_height}")
 
@@ -27,6 +32,10 @@ def create_tiles():
         scaled_width = original_width // scale
         scaled_height = original_height // scale
         
+        if scaled_width == 0 or scaled_height == 0:
+            print(f"Skipping zoom level {z} (scaled size is 0x0)")
+            continue
+
         print(f"Resizing image to {scaled_width}x{scaled_height} for this level...")
         scaled_image = source_image.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
         
