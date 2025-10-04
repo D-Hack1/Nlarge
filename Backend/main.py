@@ -41,6 +41,73 @@ async def get_tile(image_set: str, z: int, x: int, y: int):
     # Return the image file
     return FileResponse(tile_path)
 
+@app.get("/tiles-debug/{image_set}/{z}/{x}/{y}.png")
+async def get_tile_with_debug(image_set: str, z: int, x: int, y: int):
+    """
+    This endpoint returns tiles with debug information overlaid.
+    Shows level, column (X), and row (Y) information on each tile.
+    """
+    from PIL import Image, ImageDraw, ImageFont
+    import io
+    from fastapi.responses import StreamingResponse
+    
+    print(f"🔍 Debug tile request: {image_set}/{z}/{x}/{y}.png")
+    
+    tile_path = os.path.join(TILESETS_DIR, image_set, str(z), str(x), f"{y}.png")
+    
+    if not os.path.exists(tile_path):
+        print(f"❌ Tile not found: {tile_path}")
+        raise HTTPException(status_code=404, detail="Tile not found")
+    
+    # Load the original tile
+    img = Image.open(tile_path)
+    draw = ImageDraw.Draw(img)
+    
+    # Try to use a built-in font, fallback to default if not available
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 20)
+    except:
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
+        except:
+            font = ImageFont.load_default()
+    
+    # Add debug information
+    debug_text = f"Level: {z}\nColumn: {x}\nRow: {y}\nSize: {img.width}x{img.height}"
+    
+    # Draw semi-transparent background for text
+    text_bbox = draw.textbbox((0, 0), debug_text, font=font)
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+    
+    # Create overlay for text background
+    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    
+    # Draw background rectangle
+    overlay_draw.rectangle([5, 5, text_width + 15, text_height + 15], fill=(0, 0, 0, 128))
+    
+    # Composite overlay onto image
+    img = img.convert('RGBA')
+    img = Image.alpha_composite(img, overlay)
+    
+    # Draw text
+    draw = ImageDraw.Draw(img)
+    draw.text((10, 10), debug_text, fill=(255, 255, 255, 255), font=font)
+    
+    # Draw border around tile
+    draw.rectangle([0, 0, img.width-1, img.height-1], outline=(0, 255, 0, 255), width=2)
+    
+    # Convert back to RGB and save to bytes
+    img = img.convert('RGB')
+    img_byte_arr = io.BytesIO()
+    img.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)
+    
+    print(f"✅ Serving debug tile: {tile_path}")
+    
+    return StreamingResponse(io.BytesIO(img_byte_arr.read()), media_type="image/png")
+
 @app.get("/")
 def read_root():
     return {"message": "NASA Image Tile Server is running"}
