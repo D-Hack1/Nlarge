@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+*.swp
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+env/
+.env
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# PyTorch / ML
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.t7
+
+# Logs
+*.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Dataset folders (large data)
+dataset/train/
+dataset/val/
+dataset/test/
+dataset
