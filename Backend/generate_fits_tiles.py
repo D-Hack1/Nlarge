@@ -2,8 +2,8 @@ import os
 from PIL import Image
 
 # --- CONFIGURATION ---
-SOURCE_IMAGE_PATH = 'earth.png'  # The giant image you downloaded
-OUTPUT_DIR = './tiles'            # Where the tile folders will be created
+SOURCE_IMAGE_PATH = './tiles/earth.png'  # The giant image you downloaded
+OUTPUT_DIR = './tiles/green_fits2'            # Where the tile folders will be created
 TILE_SIZE = 256                   # The width and height of each tile in pixels
 MAX_ZOOM = 4                      # The maximum zoom level you want to generate
 
@@ -59,6 +59,8 @@ def create_tiles():
                 tile.save(tile_path)
 
     print("--- Tiling complete! ---")
+    print(f"IMPORTANT: Image dimensions are Width={original_width}, Height={original_height}") 
+
 
 if __name__ == '__main__':
     if not os.path.exists(OUTPUT_DIR):

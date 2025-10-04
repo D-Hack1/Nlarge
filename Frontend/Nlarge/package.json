@@ -10,8 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
+    "openseadragon": "^5.0.1",
+    "openseadragon-react-viewer": "^3.6.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.9.3"
   },
   "devDependencies": {

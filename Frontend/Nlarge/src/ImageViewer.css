@@ -1,72 +1,38 @@
 /* ./src/ImageViewer.css */
+
 .viewer-container {
-  position: relative;
-  width: 100vw;
+  /* This parent container is still correct */
   height: 100vh;
-  background-color: #000;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  flex-direction: column;
+  background-color: #111827;
+}
+
+/* This is the NEW rule for the new library */
+#openseadragon-viewer {
+  flex-grow: 1;
+  width: 100%;
+  background-color: #000;
+}
+
+.viewer-header {
+  /* The header needs to be told not to shrink */
+  flex-shrink: 0;
+  padding: 1rem;
+  color: white;
+  text-align: center;
+  position: relative; /* Changed from absolute */
+  z-index: 10;
 }
 
 .back-link {
   position: absolute;
-  top: 1.5rem;
-  left: 1.5rem;
-  color: #818cf8;
-  z-index: 10;
-  text-decoration: none;
-}
-
-.image-display-area {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.fits-image {
-  max-width: 95%;
-  max-height: 95vh;
-  object-fit: contain; /* This ensures the whole image is visible */
-}
-
-.viewer-header {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  padding: 1.5rem;
-  text-align: center;
-  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  top: 1rem;
+  left: 1rem;
+  z-index: 20; /* Must be on top of everything */
+  background: rgba(0,0,0,0.5);
   color: white;
-}
-/* Add these to ./src/ImageViewer.css */
-
-.zoom-controls {
-  position: absolute;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  display: flex;
-  gap: 1rem;
-  z-index: 10;
-}
-
-.coords-display {
-  background-color: rgba(0,0,0,0.5);
-  padding: 0.25rem 0.75rem;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
   border-radius: 8px;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-  display: inline-block;
-}
-
-.fits-image {
-  max-width: 95%;
-  max-height: 95vh;
-  object-fit: contain;
-  transition: transform 0.2s ease-out; /* Smooth zoom transition */
-  cursor: crosshair;
-}
+} 
