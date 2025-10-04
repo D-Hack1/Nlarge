@@ -1,0 +1,45 @@
+/* ./src/ImageViewer.css */
+.viewer-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.back-link {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  color: #818cf8;
+  z-index: 10;
+  text-decoration: none;
+}
+
+.image-display-area {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fits-image {
+  max-width: 95%;
+  max-height: 95vh;
+  object-fit: contain; /* This ensures the whole image is visible */
+}
+
+.viewer-header {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 1.5rem;
+  text-align: center;
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  color: white;
+}

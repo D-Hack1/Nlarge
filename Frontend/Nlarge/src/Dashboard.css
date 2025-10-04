@@ -1,0 +1,27 @@
+/* ./src/Dashboard.css */
+
+.dashboard {
+  padding: 2rem;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3rem;
+}
+
+.search-box {
+  background-color: #1f2937;
+  color: white;
+  border: 1px solid #4b5563;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  width: 250px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
