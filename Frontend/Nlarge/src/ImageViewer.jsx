@@ -1,7 +1,8 @@
 // ./src/ImageViewer.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { handleZoom } from '../context/zoomHandler'; // Import your function
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { handleZoom } from '../context/zoomHandler';
 import './ImageViewer.css';
 
 const imageMap = {
@@ -13,25 +14,14 @@ const ImageViewer = () => {
   const { imageName } = useParams();
   const imageUrl = imageMap[imageName] || '/placeholder.png';
 
-  // State for zoom and position
-  const [zoom, setZoom] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  // We'll use this state to display the current coordinates
+  const [transformState, setTransformState] = useState({ z: 1, x: 0, y: 0 });
 
-  // This effect calls handleZoom whenever the zoom or position changes
-  useEffect(() => {
-    handleZoom(zoom, position.x, position.y);
-  }, [zoom, position]);
-
-  const zoomIn = () => setZoom(prev => prev * 1.2);
-  const zoomOut = () => setZoom(prev => Math.max(0.5, prev / 1.2));
-  
-  // Simulate getting coordinates by clicking on the image
-  const handleImageClick = (e) => {
-    // Get click coordinates relative to the image element
-    const rect = e.target.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setPosition({ x, y });
+  // This function is called by the library every time the user pans or zooms
+  const onTransformed = (state) => {
+    const { scale, positionX, positionY } = state;
+    setTransformState({ z: scale, x: positionX, y: positionY });
+    handleZoom(scale, positionX, positionY);
   };
 
   return (
@@ -40,27 +30,35 @@ const ImageViewer = () => {
         &larr; Back to Dashboard
       </Link>
       
-      <div className="image-display-area">
-        <img 
-          src={imageUrl} 
-          alt={imageName} 
-          className="fits-image"
-          style={{ transform: `scale(${zoom})` }} // Apply CSS zoom
-          onClick={handleImageClick}
-        />
-      </div>
+      <TransformWrapper
+        initialScale={1}
+        onTransformed={onTransformed}
+      >
+        {({ zoomIn, zoomOut, resetTransform }) => (
+          <>
+            <div className="image-display-area">
+              <TransformComponent
+                wrapperStyle={{ width: '100%', height: '100%' }}
+                contentStyle={{ width: '100%', height: '100%' }}
+              >
+                <img src={imageUrl} alt={imageName} className="fits-image" />
+              </TransformComponent>
+            </div>
 
-      <div className="viewer-header">
-        <h1>{imageName}</h1>
-        <div className="coords-display">
-          Z: {zoom.toFixed(2)}, X: {Math.round(position.x)}, Y: {Math.round(position.y)}
-        </div>
-      </div>
-      
-      <div className="zoom-controls">
-        <button className="zoom-button" onClick={zoomOut}>-</button>
-        <button className="zoom-button" onClick={zoomIn}>+</button>
-      </div>
+            <div className="viewer-header">
+              <h1>{imageName}</h1>
+              <div className="coords-display">
+                Z: {transformState.z.toFixed(2)}, X: {Math.round(transformState.x)}, Y: {Math.round(transformState.y)}
+              </div>
+            </div>
+            
+            <div className="zoom-controls">
+              <button className="zoom-button" onClick={() => zoomOut()}>-</button>
+              <button className="zoom-button" onClick={() => zoomIn()}>+</button>
+            </div>
+          </>
+        )}
+      </TransformWrapper>
     </div>
   );
 };
