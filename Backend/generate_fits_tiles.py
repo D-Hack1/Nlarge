@@ -1,77 +1,104 @@
 import os
+import io
+import json
+import math # <-- Import the math library
 from PIL import Image
-import math
+from google.cloud import storage
 
 # --- CONFIGURATION ---
-SOURCE_IMAGE_PATH = './tiles/starbirth.tif'  # The giant image you downloaded
-OUTPUT_DIR = './tiles/starbirth_fits'            # Where the tile folders will be created
-TILE_SIZE = 512  # The width and height of each tile in pixels
-Image.MAX_IMAGE_PIXELS = None
-source_image = Image.open(SOURCE_IMAGE_PATH)
-original_width, original_height = source_image.size
-min_level_size = 512  # or your preferred minimum
-MAX_ZOOM = int(math.ceil(math.log2(original_width / min_level_size)))                     # The maximum zoom level you want to generate
+SOURCE_IMAGE_PATH = './tiles/sample2.tif'
+BUCKET_NAME = 'n-large'
+YOUR_PROJECT_ID = 'gen-lang-client-0849924728'
+OUTPUT_PREFIX = 'star_birth'
+TILE_SIZE = 512 # <-- Updated tile size
+# The desired size of the smallest dimension at the most zoomed-out level.
+# This helps determine how many zoom levels are needed.
+MIN_LEVEL_SIZE = 512 
 
 # --- SCRIPT ---
 
-def create_tiles():
-    print("Opening source image...")
-    # Pillow can have issues with very large images, so this line helps
-    Image.MAX_IMAGE_PIXELS = None 
-    
-    
+def create_and_upload_tiles():
+    # Initialize the Google Cloud Storage client
+    print("Initializing Google Cloud Storage client...")
+    storage_client = storage.Client(project=YOUR_PROJECT_ID)
+    bucket = storage_client.bucket(BUCKET_NAME)
+    print(f"Uploading to bucket: gs://{bucket.name}")
 
+    print("Opening source image...")
+    Image.MAX_IMAGE_PIXELS = None # Allow Pillow to open very large images
+    source_image = Image.open(SOURCE_IMAGE_PATH)
+    original_width, original_height = source_image.size
     print(f"Source image size: {original_width}x{original_height}")
 
-    # Loop through each zoom level
+    # --- DYNAMICALLY CALCULATE MAX_ZOOM ---
+    # This logic is now inside the function because it depends on the image dimensions.
+    if original_width <= 0:
+        raise ValueError("Source image width must be positive.")
+    MAX_ZOOM = int(math.ceil(math.log2(original_width / MIN_LEVEL_SIZE)))
+    print(f"Dynamically calculated MAX_ZOOM: {MAX_ZOOM}")
+    # ------------------------------------
+
+    # Loop through each zoom level to create and upload tiles
     for z in range(MAX_ZOOM + 1):
         print(f"--- Processing zoom level {z} ---")
-        
-        # Calculate the dimensions of the image at this zoom level
         scale = 2**(MAX_ZOOM - z)
         scaled_width = original_width // scale
         scaled_height = original_height // scale
         
         if scaled_width == 0 or scaled_height == 0:
-            print(f"Skipping zoom level {z} (scaled size is 0x0)")
+            print(f"Skipping zoom level {z} due to zero size.")
             continue
 
         print(f"Resizing image to {scaled_width}x{scaled_height} for this level...")
         scaled_image = source_image.resize((scaled_width, scaled_height), Image.Resampling.LANCZOS)
         
-        # Calculate the number of tiles needed in each direction
         cols = scaled_width // TILE_SIZE
         rows = scaled_height // TILE_SIZE
-
-        # Create the directory for the current zoom level
-        zoom_dir = os.path.join(OUTPUT_DIR, str(z))
         
-        # Loop through the rows and columns to create each tile
         for y in range(rows + 1):
             for x in range(cols + 1):
-                # Define the bounding box for the tile
                 left = x * TILE_SIZE
                 upper = y * TILE_SIZE
                 right = left + TILE_SIZE
                 lower = upper + TILE_SIZE
 
-                # Crop the tile from the scaled image
                 tile = scaled_image.crop((left, upper, right, lower))
 
-                # Create the tile's directory path
-                tile_dir = os.path.join(zoom_dir, str(x))
-                if not os.path.exists(tile_dir):
-                    os.makedirs(tile_dir)
-                
-                # Save the tile
-                tile_path = os.path.join(tile_dir, f"{y}.png")
-                tile.save(tile_path)
+                blob_path = f"{OUTPUT_PREFIX}/{z}/{x}/{y}.png"
+                blob = bucket.blob(blob_path)
 
-    print("--- Tiling complete! ---")
-    print(f"IMPORTANT: Image dimensions are Width={original_width}, Height={original_height}") 
+                in_mem_file = io.BytesIO()
+                tile.save(in_mem_file, format='PNG')
+                in_mem_file.seek(0)
+
+                blob.upload_from_file(in_mem_file)
+
+    print("--- Tiling and image upload complete! ---")
+    
+    # --- CREATE AND UPLOAD CONFIG.JSON ---
+    print("--- Creating and uploading config.json ---")
+    
+    # 1. Create the configuration dictionary
+    config_data = {
+        "width": original_width,
+        "height": original_height,
+        "tileSize": TILE_SIZE,
+        "maxLevel": MAX_ZOOM
+    }
+
+    # 2. Define the path for the config file in the bucket
+    config_blob_path = f"{OUTPUT_PREFIX}/config.json"
+    config_blob = bucket.blob(config_blob_path)
+
+    # 3. Convert the dictionary to a JSON string and upload it
+    # The 'indent=2' makes the file readable
+    config_string = json.dumps(config_data, indent=2)
+    config_blob.upload_from_string(config_string, content_type='application/json')
+    
+    print(f"✅ Successfully uploaded config to gs://{bucket.name}/{config_blob_path}")
+    # --- END OF NEW SECTION ---
 
 
 if __name__ == '__main__':
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
-    create_tiles()
+    create_and_upload_tiles()
+

@@ -42,4 +42,6 @@ dataset/test/
 dataset
 
 blue_fits/
-green_fits2/
+green_fits/
+
+*.tif

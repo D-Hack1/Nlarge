@@ -15,7 +15,7 @@ const Dashboard = () => {
     { title: 'blue.fits', description: 'Antennae Galaxies (Blue Channel)', filterColor: '#60a5fa' },
     { title: 'green.fits', description: 'Antennae Galaxies (Green Channel)', filterColor: '#4ade80' },
     { title: 'red_placeholder.fits', description: 'Antennae Galaxies (Red Channel)', filterColor: '#f87171' },
-    { title: 'earth_composite.hdf', description: 'Global VIIRS Composite', filterColor: '#38bdf8' },
+    { title: 'star_birth', description: 'Global VIIRS Composite', filterColor: '#38bdf8' },
   ];
 
   return (
