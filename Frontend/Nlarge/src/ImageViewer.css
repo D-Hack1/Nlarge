@@ -43,3 +43,30 @@
   background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
   color: white;
 }
+/* Add these to ./src/ImageViewer.css */
+
+.zoom-controls {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  z-index: 10;
+}
+
+.coords-display {
+  background-color: rgba(0,0,0,0.5);
+  padding: 0.25rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  display: inline-block;
+}
+
+.fits-image {
+  max-width: 95%;
+  max-height: 95vh;
+  object-fit: contain;
+  transition: transform 0.2s ease-out; /* Smooth zoom transition */
+  cursor: crosshair;
+}
