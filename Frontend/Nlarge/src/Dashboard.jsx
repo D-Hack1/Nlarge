@@ -71,7 +71,7 @@ const Dashboard = () => {
       dimensions: "4096×4096",
     },
     {
-      title: "green.fits",
+      title: "sombrero",
       description: "Antennae Galaxies (Green Channel)",
       filterColor: "#4ade80",
       fileSize: "2.4 MB",
