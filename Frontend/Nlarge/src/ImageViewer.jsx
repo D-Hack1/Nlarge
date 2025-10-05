@@ -54,6 +54,10 @@ const ImageViewer = () => {
     if (!imageConfig || !viewerRef.current) return;
     setViewerLoaded(false);
 
+    // Create AbortController to cancel requests when navigating away
+    const abortController = new AbortController();
+    let isComponentMounted = true;
+
     const tileSourceUrl = debugMode
       ? `http://127.0.0.1:8000/tiles-debug/${imageSet}/`
       : imageConfig.tileSourceUrl + "/";
@@ -88,7 +92,7 @@ const ImageViewer = () => {
     let batchTimer = null;
 
     const sendBatch = async () => {
-      if (pendingLabels.length === 0) return;
+      if (pendingLabels.length === 0 || !isComponentMounted) return;
       const currentPending = [...pendingLabels];
       pendingLabels = [];
       const urls = currentPending.map((p) => p.absUrl);
@@ -99,6 +103,7 @@ const ImageViewer = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_paths: urls }),
+          signal: abortController.signal, // Cancel request if component unmounts
         });
         if (response.ok) {
           const labelData = await response.json();
@@ -184,8 +189,25 @@ const ImageViewer = () => {
     });
 
     return () => {
+      // Mark component as unmounted to prevent state updates
+      isComponentMounted = false;
+      
+      // Cancel any ongoing HTTP requests
+      abortController.abort();
+      
+      // Clear timers
       if (batchTimer) clearTimeout(batchTimer);
+      
+      // Clear pending requests
+      pendingLabels = [];
+      
+      // Clear tile cache
+      tileLabelCache.current = {};
+      
+      // Destroy viewer
       if (viewer) viewer.destroy();
+      
+      console.log(`🧹 Cleaned up ImageViewer for: ${imageSet}`);
     };
   }, [imageConfig, debugMode, imageSet]);
 
