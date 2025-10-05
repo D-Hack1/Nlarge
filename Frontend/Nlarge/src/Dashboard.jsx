@@ -210,8 +210,8 @@ const Dashboard = () => {
           <Card.Body className="p-4">
             <Row className="align-items-center">
               <Col md={8} className="bg-dark text-white p-4 rounded shadow-lg">
-                <h3 className="fw-bold mb-2">Welcome to NLarge</h3>
-                <p className="mb-0">
+                <h3 className="fw-bold mb-2" style={{fontFamily: '"Alan Sans", sans-serif'}}>Welcome to NLarge</h3>
+                <p className="mb-0" style={{fontFamily: '"Alan Sans", sans-serif'}}>
                   Explore high-resolution astronomical images and datasets.
                   Click on any image card to view in full detail with our
                   advanced viewer.

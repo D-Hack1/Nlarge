@@ -11,12 +11,12 @@ const ImageCard = ({ title, description, filterColor }) => {
       <div className="image-card">
         <div>
           <h3 className="card-title">
-            <span className="card-filter-dot" style={{ backgroundColor: filterColor }}></span>
+            <span className="card-filter-dot" style={{ backgroundColor: filterColor, fontFamily: '"Alan Sans", sans-serif' }}></span>
             {title}
           </h3>
-          <p className="card-description">{description}</p>
+          <p className="card-description" style={{ fontFamily: '"Alan Sans", sans-serif' }}>{description}</p>
         </div>
-        <div className="card-link">Open Viewer</div>
+        <div className="card-link" style={{ fontFamily: '"Alan Sans", sans-serif' }}>Open Viewer</div>
       </div>
     </Link>
   );
