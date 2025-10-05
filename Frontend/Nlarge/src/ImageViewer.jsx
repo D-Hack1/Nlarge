@@ -55,9 +55,17 @@ const ImageViewer = () => {
   }, [imageSet]);
 
   // New: Overlay logic
+  // ImageViewer.js
+  // ...
+
   useEffect(() => {
     if (!imageConfig || !viewerRef.current) return;
     setViewerLoaded(false);
+
+    const tileSourceUrl = debugMode
+      ? `http://127.0.0.1:8000/tiles-debug/${imageSet}/` // Use local server for debug mode
+      : imageConfig.tileSourceUrl + "/"; // Use direct GCS URL from config
+
     const viewer = OpenSeadragon({
       element: viewerRef.current,
       prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
@@ -67,7 +75,8 @@ const ImageViewer = () => {
         tileSize: imageConfig.tileSize,
         minLevel: 0,
         maxLevel: imageConfig.maxLevel,
-        getTileUrl: (level, x, y) => `${tileUrl}${level}/${x}/${y}.png`,
+        // CORRECTED: Use the tileSourceUrl variable here
+        getTileUrl: (level, x, y) => `${tileSourceUrl}${level}/${x}/${y}.png`,
       },
       showNavigator: true,
       animationTime: 1.2,
@@ -75,23 +84,20 @@ const ImageViewer = () => {
       springStiffness: 10,
     });
 
-    osdViewerRef.current = viewer; // Save for later cleanup
+    osdViewerRef.current = viewer;
 
     viewer.addHandler("open", () => {
       setViewerLoaded(true);
-      // Clear overlays whenever a new image is opened
       viewer.clearOverlays();
       tileLabelCache.current = {};
       setTileLabels({});
     });
 
-    // Main: Listen for *tile-drawn* events to overlay labels
+    // The handler below is already correct and will be triggered once the tiles start loading
     viewer.addHandler("tile-drawn", async (evt) => {
-      const { level, x, y, tiledImage } = evt.tile;
-      // Compose the absolute URL same as what backend expects
+      const { level, x, y } = evt.tile;
       const absUrl = `https://storage.googleapis.com/n-large/${imageSet}/${level}/${x}/${y}.png`;
 
-      // Avoid duplicate requests/caching
       if (tileLabelCache.current[absUrl] !== undefined) {
         const label = tileLabelCache.current[absUrl];
         if (label) addLabelOverlay(viewer, evt, label);
@@ -104,6 +110,8 @@ const ImageViewer = () => {
             absUrl
           )}`
         );
+        console.log(`📡 Calling backend for tile label: ${labelResp.url}`);
+
         if (labelResp.ok) {
           const labelData = await labelResp.json();
           tileLabelCache.current[absUrl] = labelData.value;
@@ -111,7 +119,8 @@ const ImageViewer = () => {
         } else {
           tileLabelCache.current[absUrl] = null;
         }
-      } catch {
+      } catch (e) {
+        console.error("Failed to fetch tile label:", e);
         tileLabelCache.current[absUrl] = null;
       }
     });
@@ -120,8 +129,7 @@ const ImageViewer = () => {
       viewer.destroy();
       osdViewerRef.current = null;
     };
-    // Be careful: imageSet and tileUrl should be in dependencies!
-  }, [imageConfig, tileUrl, imageSet]);
+  }, [imageConfig, debugMode, imageSet]);
 
   function addLabelOverlay(viewer, evt, label) {
     // Overlay at tile's upper left (x, y in viewport image coords)
