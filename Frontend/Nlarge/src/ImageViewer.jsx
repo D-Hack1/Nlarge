@@ -205,10 +205,7 @@ const ImageViewer = () => {
                     <p className="mb-2 text-uppercase" style={{fontFamily: '"Alan Sans", sans-serif'}}>{imageConfig.format}</p>
                   </div>
                 )}
-                <div className="mt-4 p-3 bg-secondary bg-opacity-10 rounded shadow-sm animate-fade">
-                  <small className="text-muted d-block" style={{fontFamily: '"Alan Sans", sans-serif'}}>Tile Server</small>
-                  <code className="text-info small">{tileUrl}</code>
-                </div>
+                
               </Card.Body>
             </Card>
           </Col>
