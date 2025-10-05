@@ -108,7 +108,7 @@ def process_image(image_name, original_width, original_height, TILE_SIZE=512):
         url = f"{gcs_base_url}{bucket_name}/{image_name}/{z}/{x}/{y}.png"
         predict_image_from_url(url, model, transform, classes)
 
-process_image("bubble-nebula", 7857, 7462)
+process_image("star_birth", 17043, 11710)
 
 # Close DB connection
 cursor.close()
