@@ -1,38 +1,153 @@
-/* ./src/ImageViewer.css */
-
-.viewer-container {
-  /* This parent container is still correct */
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: #111827;
+.image-viewer-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* This is the NEW rule for the new library */
-#openseadragon-viewer {
-  flex-grow: 1;
+/* Main viewer column */
+.viewer-column {
+  height: calc(100vh - 76px);
+  min-height: 500px;
+}
+
+/* Main viewer area with animation */
+.viewer-main {
   width: 100%;
-  background-color: #000;
+  height: 100%;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(.4,0,.2,1), box-shadow 0.3s, border-radius 0.3s;
 }
 
-.viewer-header {
-  /* The header needs to be told not to shrink */
-  flex-shrink: 0;
-  padding: 1rem;
-  color: white;
-  text-align: center;
-  position: relative; /* Changed from absolute */
-  z-index: 10;
+.viewer-main.loaded {
+  opacity: 1;
 }
 
-.back-link {
+/* Sidebar layout and scroll */
+.sidebar {
+  height: calc(100vh - 76px);
+  overflow-y: auto;
+}
+
+/* Sidebar card effect */
+.sidebar-card {
+  transition: box-shadow 0.3s, transform 0.3s;
+  cursor: default;
+}
+.sidebar-card:hover {
+  box-shadow: 0 8px 32px 3px rgba(255,193,7,0.18);
+  transform: translateY(-3px) scale(1.01);
+}
+
+/* Custom scrollbar for sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* OpenSeadragon customizations */
+.openseadragon-container {
+  background: #000 !important;
+}
+
+/* React Bootstrap overrides for dark theme */
+.navbar-dark .navbar-brand {
+  color: #f8f9fa;
+  transition: color 0.2s;
+}
+.navbar-dark .navbar-brand:hover {
+  color: #ffc107;
+}
+
+.card {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.border-secondary {
+  border-color: #495057 !important;
+}
+.text-muted {
+  color: #6c757d !important;
+}
+
+/* Loading animation enhancement */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991.98px) {
+  .viewer-column {
+    height: 60vh;
+  }
+  .sidebar {
+    height: 40vh;
+  }
+}
+
+/* Smooth transitions & animation classes */
+.viewer-main,
+.badge,
+.form-switch .form-check-input,
+.card,
+.shadow-lg {
+  transition: all 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+/* Subtle fade and pop-in animations */
+.animate-fade {
+  animation: fadeIn 0.6s both;
+}
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.animate-pop {
+  animation: popIn 0.6s cubic-bezier(.6,-0.28,.74,.05) both;
+}
+@keyframes popIn {
+  0% { transform: scale(.96); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Badge enhancements */
+.badge {
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Form switch customization */
+.form-switch .form-check-input:checked {
+  background-color: #ffc107;
+  border-color: #ffc107;
+}
+.form-switch .form-check-input:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+/* Shimmer effect for important action buttons */
+.shimmer-btn {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-btn::after {
+  content: '';
   position: absolute;
-  top: 1rem;
-  left: 1rem;
-  z-index: 20; /* Must be on top of everything */
-  background: rgba(0,0,0,0.5);
-  color: white;
-  padding: 0.5rem 1rem;
-  text-decoration: none;
-  border-radius: 8px;
-} 
+  top: 0; right: -50%; bottom: 0; left: -50%;
+  background: linear-gradient(110deg,rgba(255,255,255,0) 50%,rgba(255,255,255,0.18) 60%,rgba(255,255,255,0) 80%);
+  width: 200%;
+  transform: translateX(-100%);
+  pointer-events: none;
+  animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
