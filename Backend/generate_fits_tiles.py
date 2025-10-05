@@ -6,10 +6,10 @@ from PIL import Image
 from google.cloud import storage
 
 # --- CONFIGURATION ---
-SOURCE_IMAGE_PATH = './tiles/sample3.tif'
+SOURCE_IMAGE_PATH = './tiles/sample4.tif'
 BUCKET_NAME = 'n-large'
 YOUR_PROJECT_ID = 'gen-lang-client-0849924728'
-OUTPUT_PREFIX = 'bubble-nebula'
+OUTPUT_PREFIX = 'star-birth2'
 TILE_SIZE = 512 # <-- Updated tile size
 # The desired size of the smallest dimension at the most zoomed-out level.
 # This helps determine how many zoom levels are needed.

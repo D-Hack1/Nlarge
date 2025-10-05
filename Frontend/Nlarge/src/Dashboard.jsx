@@ -63,7 +63,7 @@ const Dashboard = () => {
   // Sample data for our images
   const images = [
     {
-      title: "blue.fits",
+      title: "star-birth2",
       description: "Antennae Galaxies (Blue Channel)",
       filterColor: "#60a5fa",
       fileSize: "2.4 MB",
