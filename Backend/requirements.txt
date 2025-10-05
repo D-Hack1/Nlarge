@@ -1,3 +1,18 @@
-astropy 
-matplotlib
-Pillow
+# Core web framework
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+
+# Image processing
+Pillow==11.0.0
+astropy==6.1.6
+matplotlib==3.10.0
+
+# Google Cloud Storage
+google-cloud-storage==2.18.2
+
+# Database (Neon PostgreSQL)
+psycopg2-binary==2.9.10
+sqlalchemy==2.0.36
+
+# Additional dependencies
+python-multipart==0.0.20
