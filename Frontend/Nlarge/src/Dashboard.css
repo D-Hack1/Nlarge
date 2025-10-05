@@ -1,34 +1,52 @@
-.dashboard-container {
+/* Full viewport and dark background fix */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+  color: white;
+  overflow-x: hidden;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Your dashboard base styles */
+.dashboard-container {
+  width: 100vw;
+  min-height: 100vh;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
 }
 
+/* Navbar */
 .dashboard-navbar {
   backdrop-filter: blur(10px);
   background: rgba(13, 13, 13, 0.95) !important;
   border-bottom: 1px solid #2d2d2d !important;
 }
 
+/* Main area */
 .dashboard-main {
   min-height: calc(100vh - 100px);
+  width: 100%;
+  animation: fadeIn 0.5s ease-in-out;
 }
 
 /* Search input styling */
 .search-input-group {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
-
 .search-input {
   border-left: none !important;
 }
-
 .search-input:focus {
   background-color: #1a1a1a !important;
   border-color: #495057 !important;
   box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1) !important;
   color: #fff !important;
 }
-
 .search-input-group .input-group-text {
   border-right: none !important;
 }
@@ -44,7 +62,6 @@
 .image-col {
   transition: transform 0.2s ease;
 }
-
 .image-col:hover {
   transform: translateY(-2px);
 }
@@ -60,16 +77,13 @@
 .dashboard-container ::-webkit-scrollbar {
   width: 8px;
 }
-
 .dashboard-container ::-webkit-scrollbar-track {
   background: #1a1a1a;
 }
-
 .dashboard-container ::-webkit-scrollbar-thumb {
   background: #404040;
   border-radius: 4px;
 }
-
 .dashboard-container ::-webkit-scrollbar-thumb:hover {
   background: #505050;
 }
@@ -79,7 +93,6 @@
   background: #1a1a1a !important;
   border: 1px solid #404040 !important;
 }
-
 .dropdown-item:hover {
   background: #2d2d2d !important;
 }
@@ -102,12 +115,10 @@
     flex-direction: column;
     gap: 1rem;
   }
-  
   .dashboard-navbar .flex-grow-1 {
     max-width: 100% !important;
     margin: 0.5rem 0 !important;
   }
-  
   .welcome-card .text-end {
     text-align: left !important;
     margin-top: 1rem;
@@ -115,10 +126,6 @@
 }
 
 /* Smooth animations */
-.dashboard-main {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -135,7 +142,13 @@
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
 }
-
 .card:hover {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Utility: Remove margin and padding for all elements */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }

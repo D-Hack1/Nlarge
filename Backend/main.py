@@ -1,17 +1,24 @@
 import os
 import io
 import json
-from fastapi import FastAPI, HTTPException, Response, Query
+from fastapi import FastAPI, HTTPException, Response, Query, Body
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, ImageDraw, ImageFont
+from typing import List
+import logging
 
 # --- New Imports ---
 from dotenv import load_dotenv
 import psycopg2
+from psycopg2.pool import SimpleConnectionPool
 # --------------------
 
 app = FastAPI()
+
+# --- Logging Setup ---
+logging.basicConfig(level=logging.DEBUG)  # Set to DEBUG for detailed output
+logger = logging.getLogger(__name__)
 
 # --- Load environment variables from .env file ---
 load_dotenv()
@@ -22,11 +29,18 @@ TILESETS_DIR = "./tiles"
 
 # --- Neon DB Configuration ---
 DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    print("⚠️ DATABASE_URL not found in environment variables. The /tile-label endpoint will not work.")
+db_pool = None
+if DATABASE_URL:
+    try:
+        db_pool = SimpleConnectionPool(1, 20, dsn=DATABASE_URL)
+        logger.info("✅ Connected to Neon PostgreSQL pool")
+    except Exception as e:
+        logger.error(f"⚠️ Failed to connect to Neon PostgreSQL: {str(e)}")
+else:
+    logger.warning("⚠️ DATABASE_URL not found in environment variables. The /tile-label endpoint will not work.")
 # -----------------------------
 
-# GCS Client Initialization (no changes here)
+# GCS Client Initialization
 try:
     from google.cloud import storage
     BUCKET_NAME = 'n-large'
@@ -34,9 +48,9 @@ try:
     storage_client = storage.Client(project=YOUR_PROJECT_ID)
     bucket = storage_client.bucket(BUCKET_NAME)
     list(bucket.list_blobs(max_results=1))
-    print(f"✅ Connected to GCS bucket: gs://{bucket.name}")
+    logger.info(f"✅ Connected to GCS bucket: gs://{bucket.name}")
 except Exception as e:
-    print(f"⚠️ GCS not available ({str(e)[:100]}...). API might not function correctly.")
+    logger.error(f"⚠️ GCS not available ({str(e)[:100]}...). API might not function correctly.")
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +60,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- No changes to the endpoints below ---
+# --- Endpoints ---
 @app.get("/info/{image_set}")
 async def get_image_info(image_set: str):
     config_path = f"{image_set}/config.json"
@@ -91,45 +105,67 @@ async def get_tile_debug(image_set: str, z: int, x: int, y: int):
 @app.get("/")
 def read_root():
     return {"message": "NASA Image Tile Server is running"}
-# --- End of unchanged endpoints ---
 
-
-# --- REPLACED endpoint logic for PostgreSQL ---
 @app.get("/tile-label")
 async def get_tile_label(file_path: str = Query(..., description="Full GCS file path of the tile")):
     """
     Returns the label/value for the given tile file path by querying the Neon PostgreSQL DB.
     """
-    if not DATABASE_URL:
+    if not db_pool:
         raise HTTPException(status_code=503, detail="Database service is not configured.")
 
-    conn = None
+    conn = db_pool.getconn()
     try:
-        # 1. Connect to your Neon database using the URL
-        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
-        
-        # 2. Execute a secure, parameterized query against the 'nlarge' table
         cur.execute("SELECT value FROM nlarge WHERE file_path = %s", (file_path,))
-        
-        # 3. Fetch the first matching row
         result = cur.fetchone()
-        
         cur.close()
 
         if result:
-            # The result is a tuple, e.g., ('nebula',), so we get the first item
             value = result[0]
             return {"file_path": file_path, "value": value}
         else:
-            # If no record was found, return a 404 error
             raise HTTPException(status_code=404, detail="No label found for this tile")
-            
     except Exception as e:
-        print(f"❌ Database query failed: {e}")
+        logger.error(f"❌ Database query failed: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while querying the database.")
     finally:
-        # 4. Important: Always close the connection
         if conn is not None:
-            conn.close()
-# -------------------------------------------------
+            db_pool.putconn(conn)
+
+@app.post("/batch-tile-labels")
+async def get_batch_tile_labels(file_paths: List[str] = Body(...)):
+    """
+    Returns a dictionary of {file_path: value} for the given list of tile file paths.
+    Missing labels will not be included in the response.
+    """
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="Database service is not configured.")
+    
+    logger.debug(f"Received batch request with file_paths: {file_paths}")
+    if not file_paths:
+        logger.warning("Empty file_paths list received")
+        raise HTTPException(status_code=422, detail="Empty file_paths list")
+    if not all(isinstance(fp, (str,)) for fp in file_paths):
+        logger.warning(f"Invalid file_paths list contains non-string values: {file_paths}")
+        raise HTTPException(status_code=422, detail="All file_paths must be strings")
+
+    conn = db_pool.getconn()
+    try:
+        cur = conn.cursor()
+        # Handle single item or multiple items with a valid tuple
+        query_paths = tuple(file_paths) if file_paths else ("",)  # Fallback to empty tuple with placeholder
+        logger.debug(f"Executing query with paths: {query_paths}")
+        cur.execute("SELECT file_path, value FROM nlarge WHERE file_path IN %s", (query_paths,))
+        results = cur.fetchall()
+        cur.close()
+
+        response = {row[0]: row[1] for row in results}
+        logger.debug(f"Batch response: {response}")
+        return response
+    except Exception as e:
+        logger.error(f"❌ Batch database query failed: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while querying the database.")
+    finally:
+        if conn is not None:
+            db_pool.putconn(conn)

@@ -95,7 +95,7 @@ const Dashboard = () => {
       dimensions: "2048×2048",
     },
     {
-      title: "nebula_composite.fits",
+      title: "bubble-nebula.fits",
       description: "Orion Nebula Multi-spectral",
       filterColor: "#c084fc",
       fileSize: "3.2 MB",
@@ -118,7 +118,6 @@ const Dashboard = () => {
       image.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       image.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
   return (
     <Container
       fluid
@@ -209,7 +208,7 @@ const Dashboard = () => {
         <Card className="mb-4 bg-dark border-secondary welcome-card">
           <Card.Body className="p-4">
             <Row className="align-items-center">
-              <Col md={8} className="bg-dark text-white p-4 rounded shadow-lg">
+              <Col md={12} className="bg-dark text-white p-4 rounded shadow-lg">
                 <h3 className="fw-bold mb-2" style={{fontFamily: '"Alan Sans", sans-serif'}}>Welcome to NLarge</h3>
                 <p className="mb-0" style={{fontFamily: '"Alan Sans", sans-serif'}}>
                   Explore high-resolution astronomical images and datasets.
@@ -217,16 +216,9 @@ const Dashboard = () => {
                   advanced viewer.
                 </p>
               </Col>
-
-              <Col md={4} className="text-end">
-                <Badge bg="primary" className="fs-6 px-3 py-2">
-                  {images.length} Total Images
-                </Badge>
-              </Col>
             </Row>
           </Card.Body>
         </Card>
-
         {/* Image Grid */}
         <Row className="g-4">
           {filteredImages.map((image, index) => (

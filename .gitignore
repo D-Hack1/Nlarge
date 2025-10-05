@@ -46,3 +46,7 @@ green_fits/
 
 *.tif
 *.pem
+
+google-credentials.json
+
+*.json
