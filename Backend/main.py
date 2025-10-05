@@ -2,7 +2,7 @@
 import os
 import io
 import json
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Query
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image, ImageDraw, ImageFont
@@ -120,3 +120,23 @@ async def get_tile_debug(image_set: str, z: int, x: int, y: int):
 @app.get("/")
 def read_root():
     return {"message": "NASA Image Tile Server is running (connected to GCS)"}
+
+# Example: In-memory mapping for demonstration (replace with DB lookup in production)
+tile_label_db = {
+    # file_path: label
+    "https://storage.googleapis.com/n-large/star-birth2/2/0/0.png": "nebula",
+    "https://storage.googleapis.com/n-large/star-birth2/2/1/0.png": "cosmos",
+    # ... (etc, ideally fetched from your database)
+}
+
+@app.get("/tile-label")
+async def get_tile_label(file_path: str = Query(..., description="Full GCS file path of the tile")):
+    """
+    Returns the label/value for the given tile file path.
+    Connect this to your actual DB for production.
+    """
+    # In production, fetch from your database using file_path as key.
+    value = tile_label_db.get(file_path)
+    if value is None:
+        raise HTTPException(status_code=404, detail="No label found for this tile")
+    return { "file_path": file_path, "value": value }
