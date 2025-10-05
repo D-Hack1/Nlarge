@@ -63,44 +63,85 @@ app.add_middleware(
 # --- Endpoints ---
 @app.get("/info/{image_set}")
 async def get_image_info(image_set: str):
-    config_path = f"{image_set}/config.json"
-    blob = bucket.blob(config_path)
-    if not blob.exists():
-        raise HTTPException(status_code=404, detail="Image configuration not found.")
-    config_bytes = blob.download_as_bytes()
-    config_data = json.loads(config_bytes)
-    config_data['tileSourceUrl'] = f"https://storage.googleapis.com/{BUCKET_NAME}/{image_set}"
-    return config_data
+    """
+    Fetch config.json directly via HTTP since bucket is public
+    """
+    import requests
+    
+    config_url = f"https://storage.googleapis.com/{BUCKET_NAME}/{image_set}/config.json"
+    
+    try:
+        response = requests.get(config_url)
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Image configuration not found.")
+        
+        response.raise_for_status()  # Raise exception for other HTTP errors
+        config_data = response.json()
+        
+        # Add direct GCS URL for tiles
+        config_data['tileSourceUrl'] = f"https://storage.googleapis.com/{BUCKET_NAME}/{image_set}"
+        
+        return config_data
+        
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch config: {str(e)}")
+
 
 @app.get("/tiles/{image_set}/{z}/{x}/{y}.png")
 async def get_tile(image_set: str, z: int, x: int, y: int):
-    blob_path = f"{image_set}/{z}/{x}/{y}.png"
-    blob = bucket.blob(blob_path)
-    if not blob.exists():
-        raise HTTPException(status_code=404, detail="Tile not found in GCS")
-    tile_bytes = blob.download_as_bytes()
-    return Response(content=tile_bytes, media_type="image/png")
+    """
+    Proxy tiles from public GCS bucket via HTTP
+    """
+    import requests
+    
+    tile_url = f"https://storage.googleapis.com/{BUCKET_NAME}/{image_set}/{z}/{x}/{y}.png"
+    
+    try:
+        response = requests.get(tile_url)
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Tile not found")
+        
+        response.raise_for_status()
+        return Response(content=response.content, media_type="image/png")
+        
+    except requests.RequestException:
+        raise HTTPException(status_code=404, detail="Tile not found")
+
 
 @app.get("/tiles-debug/{image_set}/{z}/{x}/{y}.png")
 async def get_tile_debug(image_set: str, z: int, x: int, y: int):
-    blob_path = f"{image_set}/{z}/{x}/{y}.png"
-    blob = bucket.blob(blob_path)
-    if not blob.exists():
-        raise HTTPException(status_code=404, detail="Tile not found in GCS")
-    tile_bytes = blob.download_as_bytes()
-    img = Image.open(io.BytesIO(tile_bytes))
-    draw = ImageDraw.Draw(img)
-    debug_text = f"Level: {z}\nCol (x): {x}\nRow (y): {y}"
+    """
+    Fetch tile from public GCS bucket via HTTP and add debug overlay
+    """
+    import requests
+    
+    tile_url = f"https://storage.googleapis.com/{BUCKET_NAME}/{image_set}/{z}/{x}/{y}.png"
+    
     try:
-        font = ImageFont.truetype("arial.ttf", 20)
-    except IOError:
-        font = ImageFont.load_default()
-    draw.rectangle([0, 0, img.width - 1, img.height - 1], outline="lime", width=2)
-    draw.text((10, 10), debug_text, fill="white", font=font)
-    final_image_buffer = io.BytesIO()
-    img.save(final_image_buffer, format="PNG")
-    final_image_buffer.seek(0)
-    return Response(content=final_image_buffer.getvalue(), media_type="image/png")
+        response = requests.get(tile_url)
+        if response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Tile not found")
+        
+        response.raise_for_status()
+        img = Image.open(io.BytesIO(response.content))
+        
+        # Add debug overlay
+        draw = ImageDraw.Draw(img)
+        debug_text = f"Level: {z}\nCol (x): {x}\nRow (y): {y}"
+        try:
+            font = ImageFont.truetype("arial.ttf", 20)
+        except IOError:
+            font = ImageFont.load_default()
+        draw.rectangle([0, 0, img.width - 1, img.height - 1], outline="lime", width=2)
+        draw.text((10, 10), debug_text, fill="white", font=font)
+        
+        final_image_buffer = io.BytesIO()
+        img.save(final_image_buffer, format="PNG")
+        final_image_buffer.seek(0)
+        return Response(content=final_image_buffer.getvalue(), media_type="image/png")
+        
+    except requests.RequestException:
+        raise HTTPException(status_code=404, detail="Tile not found")
 
 @app.get("/")
 def read_root():
