@@ -33,7 +33,7 @@ const ImageViewer = () => {
     setViewerLoaded(false);
     const fetchConfig = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/info/${imageSet}`);
+        const response = await fetch(`http://3.1.85.171/info/${imageSet}`);
         if (!response.ok) {
           throw new Error(`Configuration not found for ${imageSet}`);
         }
@@ -59,7 +59,7 @@ const ImageViewer = () => {
     let isComponentMounted = true;
 
     const tileSourceUrl = debugMode
-      ? `http://127.0.0.1:8000/tiles-debug/${imageSet}/`
+      ? `http://3.1.85.171/tiles-debug/${imageSet}/`
       : imageConfig.tileSourceUrl + "/";
 
     const viewer = OpenSeadragon({
@@ -86,10 +86,20 @@ const ImageViewer = () => {
       setViewerLoaded(true);
       viewer.clearOverlays();
       tileLabelCache.current = {};
+      // Initialize current zoom level
+      currentZoomLevel.current = Math.round(viewer.viewport.getZoom() * imageConfig.maxLevel);
+      console.log(`🎯 Initial zoom level set to: ${currentZoomLevel.current}`);
     });
 
     let pendingLabels = [];
     let batchTimer = null;
+
+    // Function to determine if labels should be shown at this zoom level
+    const shouldShowLabel = (tileLevel) => {
+      // Only show labels on higher zoom levels (more zoomed in)
+      // For a 5-level pyramid (0-4), show labels only on levels 2, 3, 4
+      return tileLevel >= 2;
+    };
 
     const sendBatch = async () => {
       if (pendingLabels.length === 0 || !isComponentMounted) return;
@@ -99,7 +109,7 @@ const ImageViewer = () => {
 
       console.log("Sending batch request with URLs:", urls);
       try {
-        const response = await fetch(`http://127.0.0.1:8000/batch-tile-labels`, {
+        const response = await fetch(`http://3.1.85.171/batch-tile-labels`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_paths: urls }),
@@ -111,8 +121,9 @@ const ImageViewer = () => {
           currentPending.forEach(({ evt, absUrl }) => {
             const label = labelData[absUrl] || null;
             tileLabelCache.current[absUrl] = label;
-            if (label && evt.tile.level === currentZoomLevel.current) {
+            if (label && shouldShowLabel(evt.tile.level)) {
               addLabelOverlay(viewer, evt, label);
+              console.log(`📝 Added label "${label}" to tile ${evt.tile.level}/${evt.tile.x}/${evt.tile.y}`);
             }
           });
         } else {
@@ -121,12 +132,13 @@ const ImageViewer = () => {
           // Fallback to individual requests if batch fails
           for (const { evt, absUrl } of currentPending) {
             try {
-              const singleResponse = await fetch(`http://127.0.0.1:8000/tile-label?file_path=${encodeURIComponent(absUrl)}`);
+              const singleResponse = await fetch(`http://3.1.85.171/tile-label?file_path=${encodeURIComponent(absUrl)}`);
               if (singleResponse.ok) {
                 const labelData = await singleResponse.json();
                 tileLabelCache.current[absUrl] = labelData.value;
-                if (labelData.value && evt.tile.level === currentZoomLevel.current) {
+                if (labelData.value && shouldShowLabel(evt.tile.level)) {
                   addLabelOverlay(viewer, evt, labelData.value);
+                  console.log(`📝 Added fallback label "${labelData.value}" to tile`);
                 }
               } else {
                 tileLabelCache.current[absUrl] = null;
@@ -151,7 +163,7 @@ const ImageViewer = () => {
 
       if (tileLabelCache.current[absUrl] !== undefined) {
         const label = tileLabelCache.current[absUrl];
-        if (label && level === currentZoomLevel.current) {
+        if (label && shouldShowLabel(level)) {
           addLabelOverlay(viewer, evt, label);
         }
         return;
@@ -175,11 +187,12 @@ const ImageViewer = () => {
       if (currentZoomLevel.current !== newZoomLevel) {
         currentZoomLevel.current = newZoomLevel;
         viewer.clearOverlays(); // Remove all existing overlays
-        // Reapply overlays for the current zoom level
+        // Reapply overlays only for appropriate zoom levels
         Object.entries(tileLabelCache.current).forEach(([absUrl, label]) => {
           const [_, set, level, x, y] = absUrl.split("/").slice(-5);
-          if (label && parseInt(level) === currentZoomLevel.current) {
-            const tile = viewer.world.getTileAtPoint(new OpenSeadragon.Point(x, y), currentZoomLevel.current);
+          const tileLevel = parseInt(level);
+          if (label && shouldShowLabel(tileLevel)) {
+            const tile = viewer.world.getTileAtPoint(new OpenSeadragon.Point(x, y), tileLevel);
             if (tile) {
               addLabelOverlay(viewer, { tile }, label);
             }
@@ -221,11 +234,19 @@ const ImageViewer = () => {
       div.id = overlayId;
       div.className = "tile-label-overlay";
       div.style.position = "absolute";
-      div.style.padding = "2px 5px";
-      div.style.background = "rgba(0, 0, 0, 0.7)";
+      div.style.padding = "0px";
+      div.style.background = "none";
       div.style.color = "white";
-      div.style.fontSize = "12px";
+      div.style.fontSize = "7px";
+      div.style.fontFamily = "monospace";
+      div.style.fontWeight = "bold";
+      div.style.textShadow = "1px 1px 2px rgba(0, 0, 0, 0.8)";
       div.style.pointerEvents = "none";
+      div.style.maxWidth = "40px";
+      div.style.overflow = "hidden";
+      div.style.textOverflow = "ellipsis";
+      div.style.whiteSpace = "nowrap";
+      div.style.opacity = "0.9";
       div.innerText = label;
 
       viewer.addOverlay({

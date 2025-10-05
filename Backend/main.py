@@ -12,7 +12,12 @@ import logging
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
+import time
 # --------------------
+
+# Simple in-memory cache for labels
+label_cache = {}
+CACHE_EXPIRY = 300  # 5 minutes
 
 app = FastAPI()
 
@@ -29,11 +34,15 @@ TILESETS_DIR = "./tiles"
 
 # --- Neon DB Configuration ---
 DATABASE_URL = os.environ.get("DATABASE_URL")
+logger.info(f"🔍 DATABASE_URL found: {'Yes' if DATABASE_URL else 'No'}")
+if DATABASE_URL:
+    logger.info(f"🔗 DATABASE_URL starts with: {DATABASE_URL[:20]}...")
+
 db_pool = None
 if DATABASE_URL:
     try:
-        db_pool = SimpleConnectionPool(1, 20, dsn=DATABASE_URL)
-        logger.info("✅ Connected to Neon PostgreSQL pool")
+        db_pool = SimpleConnectionPool(5, 50, dsn=DATABASE_URL)  # Increased pool size
+        logger.info("✅ Connected to Neon PostgreSQL pool (5-50 connections)")
     except Exception as e:
         logger.error(f"⚠️ Failed to connect to Neon PostgreSQL: {str(e)}")
 else:
@@ -175,38 +184,61 @@ async def get_tile_label(file_path: str = Query(..., description="Full GCS file 
             db_pool.putconn(conn)
 
 @app.post("/batch-tile-labels")
-async def get_batch_tile_labels(file_paths: List[str] = Body(...)):
+async def get_batch_tile_labels(request: dict = Body(...)):
     """
-    Returns a dictionary of {file_path: value} for the given list of tile file paths.
-    Missing labels will not be included in the response.
+    Fast batch endpoint with caching for tile labels.
     """
     if not db_pool:
         raise HTTPException(status_code=503, detail="Database service is not configured.")
     
-    logger.debug(f"Received batch request with file_paths: {file_paths}")
+    # Extract file_paths from request body
+    file_paths = request.get("file_paths", [])
+    
     if not file_paths:
-        logger.warning("Empty file_paths list received")
-        raise HTTPException(status_code=422, detail="Empty file_paths list")
-    if not all(isinstance(fp, (str,)) for fp in file_paths):
-        logger.warning(f"Invalid file_paths list contains non-string values: {file_paths}")
-        raise HTTPException(status_code=422, detail="All file_paths must be strings")
-
-    conn = db_pool.getconn()
-    try:
-        cur = conn.cursor()
-        # Handle single item or multiple items with a valid tuple
-        query_paths = tuple(file_paths) if file_paths else ("",)  # Fallback to empty tuple with placeholder
-        logger.debug(f"Executing query with paths: {query_paths}")
-        cur.execute("SELECT file_path, value FROM nlarge WHERE file_path IN %s", (query_paths,))
-        results = cur.fetchall()
-        cur.close()
-
-        response = {row[0]: row[1] for row in results}
-        logger.debug(f"Batch response: {response}")
-        return response
-    except Exception as e:
-        logger.error(f"❌ Batch database query failed: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while querying the database.")
-    finally:
-        if conn is not None:
-            db_pool.putconn(conn)
+        return {}
+    
+    current_time = time.time()
+    response = {}
+    uncached_paths = []
+    
+    # Check cache first
+    for path in file_paths:
+        if path in label_cache:
+            cache_entry = label_cache[path]
+            if current_time - cache_entry['timestamp'] < CACHE_EXPIRY:
+                if cache_entry['value'] is not None:
+                    response[path] = cache_entry['value']
+                continue
+        uncached_paths.append(path)
+    
+    # Query database only for uncached paths
+    if uncached_paths:
+        conn = db_pool.getconn()
+        try:
+            cur = conn.cursor()
+            # Use ANY() for better performance with large lists
+            cur.execute("SELECT file_path, value FROM nlarge WHERE file_path = ANY(%s)", (uncached_paths,))
+            results = cur.fetchall()
+            cur.close()
+            
+            # Update cache and response
+            for row in results:
+                file_path, value = row
+                label_cache[file_path] = {'value': value, 'timestamp': current_time}
+                response[file_path] = value
+            
+            # Cache misses (paths not found in DB)
+            found_paths = {row[0] for row in results}
+            for path in uncached_paths:
+                if path not in found_paths:
+                    label_cache[path] = {'value': None, 'timestamp': current_time}
+                    
+        except Exception as e:
+            logger.error(f"❌ Batch database query failed: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+        finally:
+            if conn is not None:
+                db_pool.putconn(conn)
+    
+    logger.info(f"📊 Batch request: {len(file_paths)} requested, {len(response)} found, {len(uncached_paths)} from DB")
+    return response
