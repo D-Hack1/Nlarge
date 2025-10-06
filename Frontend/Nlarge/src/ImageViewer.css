@@ -73,6 +73,26 @@ body,
   box-sizing: border-box;
   margin: 0 !important;
   padding: 0 !important;
+
+/* Sidebar text contrast fixes: ensure muted/label text is readable on dark background */
+.sidebar .text-muted,
+.sidebar small.text-muted,
+.sidebar .mb-3 small.text-muted,
+.sidebar-card .text-muted {
+  color: #bfc7cc !important; /* light gray for labels */
+}
+
+/* Make small details and paragraph labels more readable */
+.sidebar p,
+.sidebar .mb-2,
+.sidebar .mb-3 p {
+  color: #e6eef3 !important;
+}
+
+/* Specific adjustments for the Image Details header area */
+.sidebar .card-header h5 {
+  color: #ffffff; /* keep header title bright */
+}
 }
 
 /* Tile Label Overlay Styles - Text Only */

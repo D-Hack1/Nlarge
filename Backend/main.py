@@ -18,7 +18,6 @@ import time
 # Simple in-memory cache for labels
 label_cache = {}
 CACHE_EXPIRY = 300  # 5 minutes
-
 app = FastAPI()
 
 # --- Logging Setup ---
