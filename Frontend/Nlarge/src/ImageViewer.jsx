@@ -23,6 +23,7 @@ const ImageViewer = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [viewerLoaded, setViewerLoaded] = useState(false);
+  const [hoveredTile, setHoveredTile] = useState(null);
   const tileLabelCache = useRef({});
   const currentZoomLevel = useRef(null);
   const viewerInstance = useRef(null);
@@ -33,7 +34,7 @@ const ImageViewer = () => {
     setViewerLoaded(false);
     const fetchConfig = async () => {
       try {
-        const response = await fetch(`http://3.1.85.171/info/${imageSet}`);
+        const response = await fetch(`http://127.0.0.1:8000/info/${imageSet}`);
         if (!response.ok) {
           throw new Error(`Configuration not found for ${imageSet}`);
         }
@@ -59,7 +60,7 @@ const ImageViewer = () => {
     let isComponentMounted = true;
 
     const tileSourceUrl = debugMode
-      ? `http://3.1.85.171/tiles-debug/${imageSet}/`
+      ? `http://127.0.0.1:8000/tiles-debug/${imageSet}/`
       : imageConfig.tileSourceUrl + "/";
 
     const viewer = OpenSeadragon({
@@ -109,7 +110,7 @@ const ImageViewer = () => {
 
       console.log("Sending batch request with URLs:", urls);
       try {
-        const response = await fetch(`http://3.1.85.171/batch-tile-labels`, {
+        const response = await fetch(`http://127.0.0.1:8000/batch-tile-labels`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ file_paths: urls }),
@@ -132,7 +133,7 @@ const ImageViewer = () => {
           // Fallback to individual requests if batch fails
           for (const { evt, absUrl } of currentPending) {
             try {
-              const singleResponse = await fetch(`http://3.1.85.171/tile-label?file_path=${encodeURIComponent(absUrl)}`);
+              const singleResponse = await fetch(`http://127.0.0.1:8000/tile-label?file_path=${encodeURIComponent(absUrl)}`);
               if (singleResponse.ok) {
                 const labelData = await singleResponse.json();
                 tileLabelCache.current[absUrl] = labelData.value;
@@ -233,15 +234,8 @@ const ImageViewer = () => {
       div = document.createElement("div");
       div.id = overlayId;
       div.className = "tile-label-overlay";
-      div.style.position = "absolute";
-      div.style.padding = "0px";
-      div.style.background = "none";
-      div.style.color = "white";
-      div.style.fontSize = "7px";
-      div.style.fontFamily = "monospace";
-      div.style.fontWeight = "bold";
-      div.style.textShadow = "1px 1px 2px rgba(0, 0, 0, 0.8)";
-      div.style.pointerEvents = "none";
+      // Enable pointer events for hover functionality
+      div.style.pointerEvents = "auto";
       div.style.maxWidth = "40px";
       div.style.overflow = "hidden";
       div.style.textOverflow = "ellipsis";
@@ -256,6 +250,29 @@ const ImageViewer = () => {
     } else if (div.innerText !== label) {
       div.innerText = label;
     }
+    
+    // Always ensure hover events are set up (remove old ones first to avoid duplicates)
+    div.removeEventListener('mouseenter', div._hoverEnter);
+    div.removeEventListener('mouseleave', div._hoverLeave);
+    
+    // Create new event handlers and store references
+    div._hoverEnter = () => {
+      setHoveredTile({
+        label: label,
+        level: level,
+        x: x,
+        y: y,
+        coordinates: `Level ${level}, Column ${x}, Row ${y}`
+      });
+    };
+    
+    div._hoverLeave = () => {
+      setHoveredTile(null);
+    };
+    
+    // Add the new event listeners
+    div.addEventListener('mouseenter', div._hoverEnter);
+    div.addEventListener('mouseleave', div._hoverLeave);
   }
 
   const formatFileSize = (bytes) => {
@@ -338,42 +355,46 @@ const ImageViewer = () => {
                 <h5 className="mb-0">Image Details</h5>
               </Card.Header>
               <Card.Body className="p-3">
-                <div className="mb-3">
-                  <small className="text-muted">Filename</small>
-                  <p className="mb-2 text-truncate">{imageName}</p>
+                {/* Clean Image Information */}
+                <div className="mb-4">
+                  <h6 className="text-light mb-3">{imageName}</h6>
+                  <div className="d-flex justify-content-between mb-2">
+                    <span className="text-muted small">Dimensions</span>
+                    <span className="text-light small">{imageConfig.width?.toLocaleString()} × {imageConfig.height?.toLocaleString()}</span>
+                  </div>
+                  <div className="d-flex justify-content-between mb-2">
+                    <span className="text-muted small">Tile Size</span>
+                    <span className="text-light small">{imageConfig.tileSize}px</span>
+                  </div>
+                  <div className="d-flex justify-content-between mb-2">
+                    <span className="text-muted small">Zoom Levels</span>
+                    <span className="text-light small">0 - {imageConfig.maxLevel}</span>
+                  </div>
                 </div>
-                <Row className="g-2">
-                  <Col xs={6}>
-                    <small className="text-muted">Width</small>
-                    <p className="mb-2">{imageConfig.width?.toLocaleString()} px</p>
-                  </Col>
-                  <Col xs={6}>
-                    <small className="text-muted">Height</small>
-                    <p className="mb-2">{imageConfig.height?.toLocaleString()} px</p>
-                  </Col>
-                </Row>
-                <Row className="g-2">
-                  <Col xs={6}>
-                    <small className="text-muted">Tile Size</small>
-                    <p className="mb-2">{imageConfig.tileSize} px</p>
-                  </Col>
-                  <Col xs={6}>
-                    <small className="text-muted">Max Level</small>
-                    <p className="mb-2">{imageConfig.maxLevel}</p>
-                  </Col>
-                </Row>
-                {imageConfig.fileSize && (
-                  <div className="mb-3">
-                    <small className="text-muted">File Size</small>
-                    <p className="mb-2">{formatFileSize(imageConfig.fileSize)}</p>
-                  </div>
-                )}
-                {imageConfig.format && (
-                  <div className="mb-3">
-                    <small className="text-muted">Format</small>
-                    <p className="mb-2 text-uppercase">{imageConfig.format}</p>
-                  </div>
-                )}
+
+                {/* Hover Tile Information */}
+                <div className="mb-4">
+                  <h6 className="text-light mb-3"> Tile Information</h6>
+                  {hoveredTile ? (
+                    <div className="p-3 bg-dark rounded border border-secondary">
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="text-muted small">Label</span>
+                        <span className="text-warning small fw-bold">{hoveredTile.label}</span>
+                      </div>
+                      <div className="d-flex justify-content-between mb-2">
+                        <span className="text-muted small">Position</span>
+                        <span className="text-light small">{hoveredTile.coordinates}</span>
+                      </div>
+                      <div className="text-center mt-2">
+                        <small className="text-success">Hover over tiles to see their labels</small>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-dark rounded border border-secondary text-center">
+                      <small className="text-muted">Hover over a tile label to see details</small>
+                    </div>
+                  )}
+                </div>
               </Card.Body>
             </Card>
           </Col>

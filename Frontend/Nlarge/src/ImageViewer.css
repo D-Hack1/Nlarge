@@ -85,7 +85,7 @@ body,
   font-size: 7px;
   font-weight: bold;
   font-family: monospace;
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 1000;
   max-width: 40px;
   overflow: hidden;
